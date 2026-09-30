@@ -9,7 +9,7 @@
  * 5) Console End Message
  */
 
-(() => {
+export function initAdaria(LenisConstructor, assetBase) {
   "use strict";
 
   // Avoid duplicate module bindings if the script is accidentally included twice.
@@ -85,12 +85,12 @@
   const SmoothScroll = (() => {
     function init() {
       if (window.Webflow?.env?.("editor") || window.lenis) return;
-      if (typeof window.Lenis !== "function" || !window.gsap?.ticker ||
+      if (typeof LenisConstructor !== "function" || !window.gsap?.ticker ||
           typeof window.ScrollTrigger?.update !== "function") {
         Utils.safeConsole.warn("Adaria: smooth-scroll dependencies unavailable; using native scrolling.");
         return;
       }
-      const instance = new window.Lenis({
+      const instance = new LenisConstructor({
         duration: 1.2,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         direction: "vertical",
@@ -229,7 +229,7 @@
 
   // -----------------------------------------------------------------------------
   // SMART SWIPER
-  // - Auto loads Swiper CSS/JS (v11)
+  // - Loads the installed Swiper build from this release when sliders exist
   // - Lazy init via IntersectionObserver
   // - Repairs on tab clicks + resize
   // - Supports optional thumbs slider per config
@@ -454,31 +454,33 @@
     };
 
     function ensureCSS() {
-      if (document.querySelector('link[href*="swiper-bundle.min.css"]')) return;
+      if (document.querySelector('link[data-adaria-swiper-css], link[href*="swiper-bundle.min.css"]')) return;
       const link = document.createElement("link");
       link.rel = "stylesheet";
-      link.href =
-        "https://cdn.jsdelivr.net/npm/swiper@11.2.10/swiper-bundle.min.css";
+      link.dataset.adariaSwiperCss = "";
+      link.href = new URL("swiper.min.css", assetBase).href;
       document.head.appendChild(link);
     }
 
+    let swiperReady;
     function ensureJS(cb) {
       if (window.Swiper) return cb();
-
-      const existing = document.querySelector(
-        'script[src*="swiper-bundle.min.js"]'
-      );
-      if (existing) {
-        const wait = () => (window.Swiper ? cb() : setTimeout(wait, 40));
-        return wait();
+      if (!swiperReady) {
+        swiperReady = new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = new URL("swiper.min.js", assetBase).href;
+          script.dataset.adariaSwiperJs = "";
+          script.defer = true;
+          script.onload = () => window.Swiper
+            ? resolve()
+            : reject(new Error("Swiper did not initialize"));
+          script.onerror = () => reject(new Error("Swiper could not load"));
+          document.body.appendChild(script);
+        });
       }
-
-      const s = document.createElement("script");
-      s.src = "https://cdn.jsdelivr.net/npm/swiper@11.2.10/swiper-bundle.min.js";
-      s.defer = true;
-      s.onload = cb;
-      s.onerror = () => {};
-      document.body.appendChild(s);
+      swiperReady.then(cb).catch((error) => {
+        Utils.safeConsole.warn("Adaria: slider initialization unavailable.", error);
+      });
     }
 
     function normalizeOpts(base) {
@@ -993,4 +995,4 @@
     // eslint-disable-next-line no-console
     console.log("%cSite Modules%c ready", START_BADGE, START_BADGE_2);
   } catch (_) {}
-})();
+}

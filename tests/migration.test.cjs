@@ -3,18 +3,26 @@ const assert = require('node:assert/strict');
 const vm = require('node:vm');
 const fs = require('node:fs');
 const path = require('node:path');
-const source = fs.readFileSync(path.join(__dirname, '..', 'adaria-main.js'), 'utf8');
-function boot({ editor = false, dependencies = true, existing = null } = {}) {
-  const calls = { instances: [], ticks: [], native: [], scroll: [], button: null };
+const rawSource = fs.readFileSync(path.join(__dirname, '..', 'src', 'runtime.js'), 'utf8');
+const source = rawSource.replace('export function initAdaria', 'function initAdaria') + '\ninitAdaria(window.Lenis, \"https://cdn.jsdelivr.net/gh/brandvm/adaria@v1.1.0/dist/\");';
+function boot({ editor = false, dependencies = true, existing = null, slider = false } = {}) {
+  const calls = { instances: [], ticks: [], native: [], scroll: [], button: null, assets: [], warnings: [] };
   const button = { addEventListener(type, fn) { if (type === 'click') calls.button = fn; } };
   const document = {
     readyState: 'complete',
-    querySelectorAll(selector) { return selector === '[data-function="go-to-top"]' ? [button] : []; },
+    querySelectorAll(selector) {
+      if (selector === '[data-function="go-to-top"]') return [button];
+      if (slider && selector.includes('.micromarket-slider-w .swiper')) return [{}];
+      return [];
+    },
+    createElement(tag) { return { tag, dataset: {} }; },
+    head: { appendChild(el) { calls.assets.push(el); } },
+    body: { appendChild(el) { calls.assets.push(el); } },
     querySelector() { return null; }, addEventListener() {},
   };
   const context = {
-    document,
-    console: { log() {}, warn() {}, error(...args) { throw new Error(args.join(' ')); } },
+    document, URL,
+    console: { log() {}, warn(...args) { calls.warnings.push(args); }, error(...args) { throw new Error(args.join(' ')); } },
     setTimeout() { return 1; }, clearTimeout() {},
     addEventListener() {}, scrollTo(value) { calls.native.push(value); },
     matchMedia() { return { matches: false }; },
@@ -60,4 +68,21 @@ test('an existing Lenis instance is retained', () => {
   const existing = { scrollTo() {} }; const { context, calls } = boot({ existing });
   assert.equal(context.lenis, existing); assert.equal(calls.instances.length, 0);
   assert.equal(calls.ticks.length, 0);
+});
+
+test('slider dependencies resolve from the executing release directory', () => {
+  const { calls } = boot({ slider: true });
+  const css = calls.assets.find(a => a.tag === 'link');
+  const script = calls.assets.find(a => a.tag === 'script');
+  assert.equal(css.href, 'https://cdn.jsdelivr.net/gh/brandvm/adaria@v1.1.0/dist/swiper.min.css');
+  assert.equal(script.src, 'https://cdn.jsdelivr.net/gh/brandvm/adaria@v1.1.0/dist/swiper.min.js');
+});
+test('a failed Swiper request is handled without breaking other modules', async () => {
+  const { context, calls } = boot({ slider: true });
+  calls.assets.find(a => a.tag === 'script').onerror();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(context.__ADARIA_INITIALIZED, true);
+  assert.ok(context.lenis);
+  assert.equal(calls.warnings.length, 1);
+  assert.match(calls.warnings[0][0], /slider initialization unavailable/);
 });

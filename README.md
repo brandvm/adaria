@@ -1,51 +1,80 @@
 # Adaria Webflow custom code
 
-Versioned custom CSS and JavaScript for https://adaria-ca.webflow.io/.
-Migrated from the site's public CodeSandbox assets on September 30, 2026.
+Source and minified builds for https://adaria-ca.webflow.io/.
+Current release: **v1.1.0**. Package dependencies and an esbuild build follow the approach used by `brandvm/reformdd`; Webflow continues to own markup, layout, interactions and CMS content.
 
-## Copy into Webflow
-
-Use the complete contents of these three files. Replace the matching existing Adaria blocks rather than appending another copy. Preserve unrelated tracking or verification code if it has been added separately.
+## Install in Webflow
 
 | File | Webflow location |
 | --- | --- |
 | [webflow/head.html](webflow/head.html) | Site settings → Custom code → Head |
-| [webflow/global-embed.html](webflow/global-embed.html) | Shared global-code Embed in Designer, once on every page and CMS template |
+| [webflow/global-embed.html](webflow/global-embed.html) | Shared global-code Embed, once on every page and CMS template |
 | [webflow/footer.html](webflow/footer.html) | Site settings → Custom code → Footer |
 
-The shared Embed contains the full CSS, including the original head utilities and slider thumbnail/disabled-button rules. It replaces both the CodeSandbox CSS link and the small staging style block. Keeping CSS inline makes it available on the Designer canvas and allows direct editing there. There is no second custom-CSS link in the head.
+Replace the matching Adaria blocks, rather than appending duplicates. Preserve unrelated custom integrations.
 
-The footer replaces the original unpkg Lenis script, inline Lenis initialization and CodeSandbox JavaScript tag. Lenis initialization now lives in `adaria-main.js`. Keep Webflow's generated runtime, jQuery, GSAP, ScrollTrigger and SplitText enabled; do not copy or delete those generated tags. Keep any unrelated page-specific embeds, scripts and Webflow interactions.
+**Upgrading from the three v1.0.0 snippets:** only the footer changes. Replace its two script tags with the single tag in `webflow/footer.html`. Remove the separate Lenis script and any old inline Lenis initialization. Head and shared CSS Embed content are unchanged. Publish after replacing the footer.
 
-Save all three replacements, publish to the staging domain and check navigation, scrolling, sliders, tabs, thumbnails and the contact form. No Webflow publication is performed by this repository.
+The complete CSS remains in the shared Embed for Designer canvas visibility and direct editing. No additional custom CSS link is needed. Keep Webflow's generated GSAP, ScrollTrigger, SplitText, jQuery and runtime scripts enabled: those are provided by Webflow and are not duplicated in this bundle.
 
-## Versioned CDN files
+## Installed dependencies and built assets
 
-- JavaScript: https://cdn.jsdelivr.net/gh/brandvm/adaria@v1.0.0/adaria-main.js
-- CSS: https://cdn.jsdelivr.net/gh/brandvm/adaria@v1.0.0/adaria-main.css
-- Lenis: https://cdn.jsdelivr.net/npm/lenis@1.1.5/dist/lenis.min.js
-- Swiper: version 11.2.10, loaded by the existing SmartSwiper module only on pages containing matching sliders.
+`package.json` and `package-lock.json` record dependencies. `node_modules/` is ignored. Run `npm ci` to install the locked packages; GitHub/jsDelivr serve the compiled files under `dist/`, not an installed node_modules directory.
 
-JavaScript uses jsDelivr in the recommended setup. The CSS CDN file is also available, but the full CSS is already in the shared Embed: do not load both copies. If you later choose external CSS, replace the full style block with a link to the CSS URL and test Designer canvas visibility.
+| Output | Contents / loading |
+| --- | --- |
+| `dist/adaria.min.js` | Minified site logic plus Lenis 1.1.5; one footer script |
+| `dist/swiper.min.js` | Installed Swiper 12.1.2; requested only on pages with matching slider markup |
+| `dist/swiper.min.css` | Swiper's corresponding CSS, loaded alongside its JS |
+| `dist/adaria.min.css` | Minified custom CSS, available for an external-CSS setup |
+| `dist/licenses/` | Redistributed third-party license notices |
 
-Tagged URLs are immutable. For future code changes, create a new release tag and update the script URL in Webflow. Do not overwrite the v1.0.0 tag. If CSS changes in the repository, regenerate or copy the complete CSS into the shared Embed. If you edit CSS directly in Webflow, sync those edits back to the repository before generating another release.
+Swiper URLs resolve relative to the executing Adaria bundle, so they use the same immutable release automatically. There are no separate npm-CDN requests for Lenis or Swiper. esbuild is a development dependency only.
 
-## Migration details
+Production URLs:
 
-- Preserved the original styles, slider configurations, keyboard shortcut, auto-click behavior and navigation shrinking.
-- Consolidated the supplied head and Embed styles into `adaria-main.css` and the complete Designer Embed.
-- Retained Lenis 1.1.5 and its original configuration; it now exposes `window.lenis`, matching the existing go-to-top module's lookup.
-- Added a guard against double initialization and native-scroll fallback when Lenis/GSAP/ScrollTrigger are unavailable.
-- Pinned Swiper to 11.2.10, the version the old `@11` endpoint served at migration time. This is not a slider-library upgrade.
-- Preserved original external CSS/JS and original Webflow snippets under `originals/`. Inventoried the 16 publicly linked pages. Webflow-managed HTML, CMS data, media and generated code remain in Webflow; this is not a full site export.
+- https://cdn.jsdelivr.net/gh/brandvm/adaria@v1.1.0/dist/adaria.min.js
+- https://cdn.jsdelivr.net/gh/brandvm/adaria@v1.1.0/dist/adaria.min.css
 
-## Validation
+The CSS URL is optional because the recommended shared Embed already contains those rules. Do not load both copies. The full Swiper bundle preserves the existing available modules; it does not load on pages without sliders.
 
-- `npm run check`: JavaScript syntax.
-- `npm test`: five checks for the Lenis/go-to-top connection, duplicate inclusion, missing dependencies, Webflow editor exclusion and existing-instance reuse.
-- Local copies of the published homepage and smart-store page initialized without console errors or CodeSandbox resource requests. The smart-store slider advanced from index 0 to 1 via its next button.
-- Final CDN URLs are verified after publishing the tag. Webflow Designer integration and published-site behavior must be checked after the snippets are pasted; no enquiry was submitted.
+## Develop and build
 
-## Rollback
+Node 24 is recorded in `.nvmrc`. Dependencies and esbuild are pinned; the lockfile provides repeatable installs.
 
-The original head, footer, shared Embed, CSS and JS are in `originals/`. Restore matching originals together if needed. The original snippets point to CodeSandbox and depend on its availability.
+```sh
+npm ci
+npm run check
+npm test       # production build + behavior tests
+npm run build # regenerate dist/ and the Webflow snippets
+npm run dev   # watch + local asset server at http://127.0.0.1:3001
+```
+
+Source: `src/index.js` imports Lenis and starts `src/runtime.js`; `src/vendor/swiper.js` builds the separate Swiper files. CSS is authored in `src/styles.css`. The build regenerates the complete shared CSS Embed and versioned footer. If CSS was edited directly in Webflow, sync it back into `src/styles.css` before rebuilding.
+
+The development command serves unminified assets and source maps locally. It does not automatically change Webflow's installed snippets or publish the site. This repository currently uses pinned production snippets rather than Reformdd's GitHub Pages staging/dev switcher.
+
+## Release
+
+Built assets are committed in this repository so a jsDelivr tag always contains its files. The GitHub Actions check installs the lockfile, checks source syntax, builds/tests, and verifies that committed dist/ and Webflow snippets match the source.
+
+1. Update the version in `package.json` and run `npm install --package-lock-only`.
+2. Run `npm run check`, `npm test` and browser checks for the affected behavior.
+3. Commit source, lockfile, `dist/`, and `webflow/` together.
+4. Create and push a new immutable `vX.Y.Z` tag. Never move an already published tag.
+5. Verify the new jsDelivr URLs, then update the Webflow footer and any changed Embed content; publish and verify staging.
+
+The previous `v1.0.0` tag remains intact for rollback. Do not use an unversioned or branch URL for production.
+
+## What changed in v1.1.0
+
+- Added installed, locked dependencies and a repeatable minified build.
+- Bundled the existing Lenis version with site code, removing a separate script request and ordering dependency.
+- Moved Swiper delivery into the same repository release, retaining conditional loading on slider pages.
+- Updated Swiper from 11.2.10 to the patched 12.1.2 because the installed-dependency audit identified [GHSA-hmx5-qpq5-p643](https://github.com/advisories/GHSA-hmx5-qpq5-p643). No claim of site exploitation is implied.
+- Replaced repeated polling during Swiper loading with one shared load promise, reporting a failed load without an endless polling loop.
+- Retained original slider configurations, menu/tabs, CSS, native-scroll fallback, editor exclusion, go-to-top connection and duplicate-init guard.
+
+Validation: source syntax and seven behavior tests passed. Local browser checks confirmed the homepage requests only the main bundle; slider pages request matching vendor files, next-slide navigation advances, hidden tab galleries initialize and thumbnail selection updates the main image. No browser console errors appeared in those checks. `npm audit --omit=dev` reported zero vulnerabilities at release preparation. No Webflow publication or enquiry submission was performed.
+
+Original CodeSandbox assets and supplied snippets remain under `originals/`. Webflow-managed content and generated code remain in Webflow; this is not a full site export.
