@@ -13,9 +13,11 @@ Current release: **v1.1.0**. Package dependencies and an esbuild build follow th
 
 Replace the matching Adaria blocks, rather than appending duplicates. Preserve unrelated custom integrations.
 
-**Upgrading from the three v1.0.0 snippets:** only the footer changes. Replace its two script tags with the single tag in `webflow/footer.html`. Remove the separate Lenis script and any old inline Lenis initialization. Head and shared CSS Embed content are unchanged. Publish after replacing the footer.
+**Replacing the previous inline CSS Embed:** replace the entire shared Embed with `webflow/global-embed.html`, which links to the existing v1.1.0 stylesheet. Remove the old inline `<style>` block so the CSS loads once. The head and v1.1.0 footer need no functional changes. Publish after replacing the Embed.
 
-The complete CSS remains in the shared Embed for Designer canvas visibility and direct editing. No additional custom CSS link is needed. Keep Webflow's generated GSAP, ScrollTrigger, SplitText, jQuery and runtime scripts enabled: those are provided by Webflow and are not duplicated in this bundle.
+**Upgrading from v1.0.0:** also replace the footer's two script tags with the single tag in `webflow/footer.html`. Remove the separate Lenis script and any old inline Lenis initialization.
+
+Keep the stylesheet link inside the shared Embed so it can render in the Designer canvas and on published pages. CSS is maintained in GitHub, not copied into Webflow. Refresh the Designer after updating the link. Keep Webflow's generated GSAP, ScrollTrigger, SplitText, jQuery and runtime scripts enabled: those are provided by Webflow and are not duplicated in this bundle.
 
 ## Installed dependencies and built assets
 
@@ -26,7 +28,7 @@ The complete CSS remains in the shared Embed for Designer canvas visibility and 
 | `dist/adaria.min.js` | Minified site logic plus Lenis 1.1.5; one footer script |
 | `dist/swiper.min.js` | Installed Swiper 12.1.2; requested only on pages with matching slider markup |
 | `dist/swiper.min.css` | Swiper's corresponding CSS, loaded alongside its JS |
-| `dist/adaria.min.css` | Minified custom CSS, available for an external-CSS setup |
+| `dist/adaria.min.css` | Minified custom CSS, linked from the shared Designer Embed |
 | `dist/licenses/` | Redistributed third-party license notices |
 
 Swiper URLs resolve relative to the executing Adaria bundle, so they use the same immutable release automatically. There are no separate npm-CDN requests for Lenis or Swiper. esbuild is a development dependency only.
@@ -36,7 +38,7 @@ Production URLs:
 - https://cdn.jsdelivr.net/gh/brandvm/adaria@v1.1.0/dist/adaria.min.js
 - https://cdn.jsdelivr.net/gh/brandvm/adaria@v1.1.0/dist/adaria.min.css
 
-The CSS URL is optional because the recommended shared Embed already contains those rules. Do not load both copies. The full Swiper bundle preserves the existing available modules; it does not load on pages without sliders.
+The shared Embed loads the CSS URL; do not add a duplicate link in the head or retain the previous inline CSS. The full Swiper bundle preserves the existing available modules; it does not load on pages without sliders.
 
 ## Develop and build
 
@@ -50,7 +52,7 @@ npm run build # regenerate dist/ and the Webflow snippets
 npm run dev   # watch + local asset server at http://127.0.0.1:3001
 ```
 
-Source: `src/index.js` imports Lenis and starts `src/runtime.js`; `src/vendor/swiper.js` builds the separate Swiper files. CSS is authored in `src/styles.css`. The build regenerates the complete shared CSS Embed and versioned footer. If CSS was edited directly in Webflow, sync it back into `src/styles.css` before rebuilding.
+Source: `src/index.js` imports Lenis and starts `src/runtime.js`; `src/vendor/swiper.js` builds the separate Swiper files. CSS is authored in `src/styles.css`. The build regenerates the minified stylesheet, versioned stylesheet link in the shared Embed, and versioned footer. Production links are pinned: editing source on GitHub does not change an existing release. Build and publish a new tag, then update the Embed and footer links to that release.
 
 The development command serves unminified assets and source maps locally. It does not automatically change Webflow's installed snippets or publish the site. This repository currently uses pinned production snippets rather than Reformdd's GitHub Pages staging/dev switcher.
 
@@ -62,7 +64,7 @@ Built assets are committed in this repository so a jsDelivr tag always contains 
 2. Run `npm run check`, `npm test` and browser checks for the affected behavior.
 3. Commit source, lockfile, `dist/`, and `webflow/` together.
 4. Create and push a new immutable `vX.Y.Z` tag. Never move an already published tag.
-5. Verify the new jsDelivr URLs, then update the Webflow footer and any changed Embed content; publish and verify staging.
+5. Verify the new jsDelivr URLs, then update both the Webflow footer and shared Embed links; refresh the Designer, publish and verify staging.
 
 The previous `v1.0.0` tag remains intact for rollback. Do not use an unversioned or branch URL for production.
 

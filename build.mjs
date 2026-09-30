@@ -5,13 +5,13 @@ const dev = process.argv.includes("--dev");
 const pkg = JSON.parse(await readFile("package.json", "utf8"));
 
 async function writeSnippets() {
-  const css = await readFile("src/styles.css", "utf8");
   await mkdir("dist/licenses", { recursive: true });
   await copyFile("node_modules/lenis/LICENSE", "dist/licenses/lenis-MIT.txt");
   await copyFile("node_modules/swiper/LICENSE", "dist/licenses/swiper-MIT.txt");
   await mkdir("webflow", { recursive: true });
   await writeFile("webflow/global-embed.html",
-    '<!-- Adaria: shared Global Styles Embed; include once on every page. -->\n<style id="adaria-global-styles">\n' + css + '</style>\n');
+    '<!-- Adaria: shared Global Styles Embed; include once on every page. -->\n' +
+    '<link id="adaria-global-styles" rel="stylesheet" href="https://cdn.jsdelivr.net/gh/brandvm/adaria@v' + pkg.version + '/dist/adaria.min.css">\n');
   await writeFile("webflow/footer.html",
     '<!-- Adaria: Footer code. Lenis is included; remove the separate Lenis script. -->\n' +
     '<script defer src="https://cdn.jsdelivr.net/gh/brandvm/adaria@v' + pkg.version + '/dist/adaria.min.js"></script>\n');
