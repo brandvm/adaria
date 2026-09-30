@@ -1,0 +1,10 @@
+{
+  "name": "adaria",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Adaria Webflow custom CSS and JavaScript",
+  "scripts": {
+    "check": "node --check adaria-main.js",
+    "test": "node --test tests/migration.test.cjs"
+  }
+}
